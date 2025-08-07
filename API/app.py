@@ -30,7 +30,7 @@ order by o.userId, oi.itemId;
 """
 data = pd.read_sql(query, engine)
 
-print(data.head())
+print(data)
 
 
 app = FastAPI()
@@ -54,6 +54,9 @@ data['item_idx'] = item_enc.fit_transform(data['item_id'])
 matrix = coo_matrix(
     (data['purchase_count'], (data['user_idx'], data['item_idx']))
 )
+
+print(matrix.toarray()) 
+
 user_item_matrix = matrix.tocsr()
 
 # ALS 모델 학습
