@@ -28,9 +28,9 @@ where o.id = oi.orderId
 group by oi.itemId, o.userId
 order by o.userId, oi.itemId;
 """
-data = pd.read_sql(query, engine)
+# data = pd.read_sql(query, engine)
 
-print(data)
+# print(data)
 
 
 app = FastAPI()
@@ -38,11 +38,37 @@ app = FastAPI()
 # =======================
 # 데이터 및 모델 준비
 # =======================
+
 # data = pd.DataFrame({
 #     'user_id': [0, 1, 1, 2, 3, 3],
 #     'item_id': [101, 101, 102, 103, 102, 104],
 #     'purchase_count': [1, 1, 2, 1, 1, 1]
 # })
+
+
+# data = pd.DataFrame({
+#     'user_id': [0, 0, 1, 1, 2, 2],
+#     'item_id': [101, 101, 102, 103, 102, 104],
+#     'purchase_count': [1, 1, 2, 1, 1, 1]
+# })
+
+# data = pd.DataFrame({
+#     'user_id': [1,1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5],
+#     'item_id': [1,4,5,6,7,9,10,1,2,5,6,7,10,1,4,6,7,9,1,2,3,4,5,10,1,2,7,9,10],
+#     'purchase_count': [9,3,5,4,3,3,5,2,3,3,3,2,2,1,4,1,2,1,3,1,3,3,1,1,1,3,4,1,1]
+# })
+
+data = pd.DataFrame({
+    'user_id': [0, 1, 1, 1, 2, 2],
+    'item_id': [1, 1, 2, 3, 2, 4],
+    'purchase_count': [9, 3, 5, 3, 3, 5]
+})
+
+len_user = len(data['user_id'])
+len_item = len(data['item_id'])
+len_count = len(data['purchase_count'])
+
+print(len_user, len_item, len_count)
 
 # 인코딩
 user_enc = LabelEncoder()
@@ -75,12 +101,24 @@ def recommend(user_id: int = Query(..., description="원본 user_id 입력 (예:
 
     # user_idx 변환
     user_idx = user_enc.transform([user_id])[0]
+    print('user_idx: ', user_idx)
 
     # 유저 벡터 추출
-    user_vector = csr_matrix(user_item_matrix[user_idx])
+    # user_vector = csr_matrix(user_item_matrix[user_idx])
+    user_vector = user_item_matrix[user_idx]
+    print('user_vector:', user_vector.toarray())
+
+    # indices만 출력
+    # print("indices:", user_vector.indices)
+
+    # 해당 인덱스에 대응하는 실제 item_id 보기
+    # print("item_ids:", item_enc.inverse_transform(user_vector.indices))
 
     # 추천
-    item_indices, scores = model.recommend(userid=user_idx, user_items=user_vector, N=top_n)
+    item_indices, scores = model.recommend(
+        userid=user_idx, 
+        user_items=user_item_matrix,
+        N=top_n)
     item_ids = item_enc.inverse_transform(item_indices)
 
     # 결과 반환
