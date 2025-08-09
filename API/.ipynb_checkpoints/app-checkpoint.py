@@ -52,17 +52,17 @@ app = FastAPI()
 #     'purchase_count': [1, 1, 2, 1, 1, 1]
 # })
 
-# data = pd.DataFrame({
-#     'user_id': [1,1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5],
-#     'item_id': [1,4,5,6,7,9,10,1,2,5,6,7,10,1,4,6,7,9,1,2,3,4,5,10,1,2,7,9,10],
-#     'purchase_count': [9,3,5,4,3,3,5,2,3,3,3,2,2,1,4,1,2,1,3,1,3,3,1,1,1,3,4,1,1]
-# })
-
 data = pd.DataFrame({
-    'user_id': [0, 1, 1, 1, 2, 2],
-    'item_id': [1, 1, 2, 3, 2, 4],
-    'purchase_count': [9, 3, 5, 3, 3, 5]
+    'user_id': [1,1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5],
+    'item_id': [1,4,5,6,7,9,10,1,2,5,6,7,10,1,4,6,7,9,1,2,3,4,5,10,1,2,7,9,10],
+    'purchase_count': [9,3,5,4,3,3,5,2,3,3,3,2,2,1,4,1,2,1,3,1,3,3,1,1,1,3,4,1,1]
 })
+
+# data = pd.DataFrame({
+#     'user_id': [0, 1, 1, 1, 2, 2],
+#     'item_id': [1, 1, 2, 3, 2, 4],
+#     'purchase_count': [9, 3, 5, 3, 3, 5]
+# })
 
 len_user = len(data['user_id'])
 len_item = len(data['item_id'])
@@ -81,13 +81,21 @@ matrix = coo_matrix(
     (data['purchase_count'], (data['user_idx'], data['item_idx']))
 )
 
-print(matrix.toarray()) 
+user_item_matrix = matrix.tocsr() # 사용자 X 아이템
+print("user_item_matrix shape:", user_item_matrix.shape)  # (3, 4) 기대
+print(user_item_matrix.toarray())
 
-user_item_matrix = matrix.tocsr()
+X = user_item_matrix.T.tocsr() # 아이템 X 사용자
+print("X for fit shape:", X.shape)  # (4, 3) 기대
+print(X.toarray())
 
 # ALS 모델 학습
 model = AlternatingLeastSquares(factors=10, iterations=15)
-model.fit(matrix.T.tocsr())
+model.fit(user_item_matrix) 
+
+print("item_factors shape:", model.item_factors.shape)
+print("user_factors shape:", model.user_factors.shape)
+
 
 # =======================
 # API 엔드포인트
@@ -104,20 +112,26 @@ def recommend(user_id: int = Query(..., description="원본 user_id 입력 (예:
     print('user_idx: ', user_idx)
 
     # 유저 벡터 추출
-    # user_vector = csr_matrix(user_item_matrix[user_idx])
-    user_vector = user_item_matrix[user_idx]
+    user_vector = csr_matrix(user_item_matrix[user_idx])
+    # user_vector = user_item_matrix[user_idx]
     print('user_vector:', user_vector.toarray())
 
     # indices만 출력
-    # print("indices:", user_vector.indices)
+    print("indices:", user_vector.indices)
 
     # 해당 인덱스에 대응하는 실제 item_id 보기
-    # print("item_ids:", item_enc.inverse_transform(user_vector.indices))
+    print("item_ids:", item_enc.inverse_transform(user_vector.indices))
+
+    print('user_vector shape:', user_vector.shape)          # (1, num_items) ?
+    print('user_item_matrix shape:', user_item_matrix.shape)# (_, num_items)
+    print('item_factors shape:', model.item_factors.shape)  # (num_items, factors)
+
+    # assert user_vector.shape[1] == model.item_factors.shape[0]
 
     # 추천
     item_indices, scores = model.recommend(
         userid=user_idx, 
-        user_items=user_item_matrix,
+        user_items=user_vector,
         N=top_n)
     item_ids = item_enc.inverse_transform(item_indices)
 
