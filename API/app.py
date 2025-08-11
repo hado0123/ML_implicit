@@ -1,3 +1,8 @@
+# cd ML_implicit\API
+# uvicorn app:app --reload
+# http://localhost:8000/recommend?user_id=1
+# http://127.0.0.1:8000/docs 
+
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, HTTPException
