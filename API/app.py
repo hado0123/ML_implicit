@@ -3,9 +3,11 @@
 # http://localhost:8000/recommend?user_id=1
 # http://127.0.0.1:8000/docs 
 
+
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
@@ -41,6 +43,22 @@ data = pd.read_sql(query, engine)
 print(data)
 
 app = FastAPI()
+
+# 허용할 origin 설정
+origins = [
+    os.getenv("FRONTEND_APP_URL"),
+    # 필요하다면 도메인 추가
+    # "https://내도메인.com"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,          # 허용할 origin
+    allow_credentials=True,         # 쿠키 인증 허용 여부
+    allow_methods=["*"],            # 허용할 HTTP 메서드 (GET, POST 등)
+    allow_headers=["*"],            # 허용할 HTTP 헤더
+)
+
 
 # =======================
 # 데이터 및 모델 준비
@@ -117,7 +135,7 @@ def recommend(user_id: int = Query(..., description="원본 user_id 입력 (예:
 
     # 결과 반환
     result = [
-        {"item_id": int(item_id), "score": float(score)}
+        {"id": int(item_id), "score": float(score)}
         for item_id, score in zip(item_ids, scores)
     ]
     return result
